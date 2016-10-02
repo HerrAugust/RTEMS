@@ -1,5 +1,6 @@
 /*
  *  Simple test program -- simplified version of sample test hello.
+ *  Note: This program comes from the official repository of RTEMS.
  */
 
 //#include <bsp.h>

@@ -12,7 +12,7 @@ PGM=${ARCH}/posix_hello.exe
 MANAGERS=all
 
 # C source names
-CSRCS = test.c
+CSRCS = init.c tasks.c
 COBJS = $(CSRCS:%.c=${ARCH}/%.o)
 
 include $(RTEMS_MAKEFILE_PATH)/Makefile.inc
