@@ -27,14 +27,6 @@ rtems_task task2_entrypoint(
   rtems_task_argument argument
 );
 
-/* global variables */
-
-/*
- *  Keep the names and IDs in global variables so another task can use them.
- */ 
-extern rtems_id   Task_id[ 4 ];         /* array of task ids */
-extern rtems_name Task_name[ 4 ];       /* array of task names */
-
 
 
 /* configuration information */
@@ -53,13 +45,10 @@ extern rtems_name Task_name[ 4 ];       /* array of task names */
 // Needed for RM Mangager
 #define CONFIGURE_MAXIMUM_PERIODS           1
 
-#define CONFIGURE_RTEMS_INIT_TASKS_TABLE
+#define CONFIGURE_RTEMS_INIT_TASKS_TABLE /* This results in a configuration of an application which will begin
+											execution of a single initialization task named Init which is
+											non-preemptible and at priority one (1).
+										*/
 
-
-/* Needed for erc32 simulator.. */
-/* ..for using "CPU_usage_Dump", since it uses printf("%f") if your processor has floating points) */
-/* If you want to take away FP support (to avoid heavy context switch), you must rewrite CPU_usage_Dump instead */
-#define CONFIGURE_INIT_TASK_ATTRIBUTES RTEMS_FLOATING_POINT
-
-
+#define CONFIGURE_INIT
 #include <rtems/confdefs.h>

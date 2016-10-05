@@ -1,8 +1,7 @@
 /*
- * The application starts 2 tasks.
- * Tasks must print "I am task x and I am running" according to their priorities.
+ * This application shows how priorities work.
  * Expected behavior: 2 children tasks are created. One with priority 2 and the other 3.
- * 		child task with priority 3 is scheduled and then the one with priority 2, resulting in a certain order of printf.
+ * 		child task with priority 2 is scheduled, resulting in a certain order of printf.
  */
 
 // Note: RTEMS_DEAULT_MODES = RTEMS_PREEMPT | RTEMS_NO_TIMESLICE | RTEMS_ASR | RTEMS_INTERRUPT_LEVEL(0)
@@ -14,14 +13,13 @@
 #include "commonheader.h"
 
 //Execution flow begins here. This is referred to as the application
-int main(void)
+rtems_task Init(rtems_task_argument argument)
 {
 	rtems_status_code status[2];
 	rtems_id ids[2], myid;
-	rtems_task_priority priorities[2] = { 2, 3 };//VS { 5, 6 };
+	rtems_task_priority priorities[2] = { 2, 3 };//VS { 5, 6 }; : father task has highest priority and so no child is
 	rtems_name names[2];
 	rtems_task_priority p;
-	rtems_mode oldmode;
 
 	names[0] = rtems_build_name('C', 'T', '1', ' ');
 	names[1] = rtems_build_name('C', 'T', '2', ' ');
@@ -38,13 +36,6 @@ int main(void)
 	assert(temp == RTEMS_SUCCESSFUL);
 	printf("Father task has priority: %ld\n", p);
 
-	//Obtaining current mode
-	temp = rtems_task_mode(0, RTEMS_CURRENT_MODE, &oldmode);
-	assert(temp == RTEMS_SUCCESSFUL);
-	printf("Father task is preemptible: %d\n", oldmode & RTEMS_PREEMPT_MASK);
-
-	//Changing current mode
-
 
 //creating 2 children
 	// prototype: rtems_task_create( name, initial_priority, stack_size, initial_modes, attribute_set, *id );
@@ -58,26 +49,17 @@ int main(void)
 
 
 	// prototype: rtems_task_start(id, entry_point, argument)
-	status[0] = rtems_task_start(ids[0], task1_entrypoint, priorities[0]); //Notice: at this point, this task is pre-empted and control goes to function task1_entrypoint(), defined in task.c
-	printf("qui1\n");
+	status[0] = rtems_task_start(ids[0], task1_entrypoint, priorities[0]); //Notice: at this point, this task is not pre-empted because of the default configuration
+	//printf("qui1\n");
 	status[1] = rtems_task_start(ids[1], task2_entrypoint, priorities[1]);
-	printf("qui2\n");
+	//printf("qui2\n");
 	assert(status[0] == RTEMS_SUCCESSFUL);
 	assert(status[1] == RTEMS_SUCCESSFUL);
 	printf("2 tasks started successfully and they are ready\n");
 
 
-
-	/*// prototype: rtems_task_delete(id);
-	status[0] = rtems_task_delete(ids[0]);
-	status[1] = rtems_task_delete(ids[1]);
-	assert(status[0] == RTEMS_SUCCESSFUL);
-	assert(status[1] == RTEMS_SUCCESSFUL);
-	printf("2 tasks deleted successfully\n");*/
-
-
-//busy wait
-	while(1) {}
+//scheduling those two tasks
+	rtems_task_wake_after(RTEMS_YIELD_PROCESSOR); //father task was set to be non pre-emptible
 }
 
 /* end of file */
