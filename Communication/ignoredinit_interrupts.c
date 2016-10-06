@@ -1,8 +1,8 @@
 /*
  * In this example I show what the goal of interrupts priority is.
- * The father task creates a child task. The child task sends an interrupt of priority 77 to the father task, 
- * which in turn accepts it and begins not to accept interrupts with priority [77-255]. Then the child task
- * sends for the second time the same interrupt with priority 77 and the father task does not accept it.
+ * The father task creates a child task. The child task sends an interrupt of priority 27 to the father task, 
+ * which in turn accepts it and begins not to accept interrupts with priority [27-31]. Then the child task
+ * sends for the second time the same interrupt with priority 27 and the father task does not accept it.
  */
 
 #include <stdio.h>
@@ -17,9 +17,11 @@ rtems_task childtask_entrypoint(rtems_task_argument fatherid)
 	rtems_task_set_priority(id, RTEMS_CURRENT_PRIORITY, &priority); //returns current task priority
 	printf("\tThis is the task with id %ld and with priority %ld\n", id, priority);
 
-//send interrupt 77 to father
+//send interrupt 27 to father
+	rtems_signal_send(fatherid, RTEMS_SIGNAL_27);
 
-//send interrupt 77 to father
+//send interrupt 27 to father
+	rtems_signal_send(fatherid, RTEMS_SIGNAL_27);
 
 	//Without deleting this task, it will never return to father
 	if(rtems_task_delete(id) != RTEMS_SUCCESSFUL) {
@@ -30,7 +32,12 @@ rtems_task childtask_entrypoint(rtems_task_argument fatherid)
 
 rtems_isr father_handler(rtems_vector_number vector)
 {
-
+	rtems_mode oldmode, newmode, newmask;
+	newmode = RTEMS_NO_PREEMPT | RTEMS_TIMESLICE | RTEMS_INTERRUPT_LEVEL(27);
+	newmask = RTEMS_PREEMPT_MASK | RTEMS_TIMESLICE_MASK | RTEMS_INTERRUPT_MASK;
+	rtems_status_code temp = rtems_task_mode(newmode, newmask, &oldmode);
+	assert(temp == RTEMS_SUCCESSFUL);
+	printf("Father task is now blocking from signal 27\n");
 }
 
 rtems_task Init(rtems_task_argument ignored)
@@ -40,6 +47,7 @@ rtems_task Init(rtems_task_argument ignored)
 	rtems_task_priority priorities = 2;
 	rtems_name names = rtems_build_name('C', 'T', '1', ' ');
 	rtems_task_priority p;
+	rtems_isr_entry old_isr;
 
 //Getting father's properties (because of a macro config. in commonheader.h, this is the first task executed and it is not pre-emptible and with priority 1)
 	//Getting father's ID
@@ -51,8 +59,9 @@ rtems_task Init(rtems_task_argument ignored)
 	assert(temp == RTEMS_SUCCESSFUL);
 	printf("Father task has priority: %ld\n", p);
 
-	//
-
+	//Registering signal 27 handler
+	temp = rtems_signal_catch(father_handler, RTEMS_SIGNAL_27, &old_isr);
+	assert(temp == RTEMS_SUCCESSFUL);
 
 
 //creating 1 child
@@ -68,6 +77,7 @@ rtems_task Init(rtems_task_argument ignored)
 	printf("here 1\n");
 	assert(status == RTEMS_SUCCESSFUL);
 	printf("1 task started successfully and is now ready\n");
+
 
 
 //scheduling those two tasks
