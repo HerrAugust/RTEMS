@@ -2,7 +2,7 @@
  * In this example I show communication via signals (IPC).
  * The father task registers an ASR, creates a child and the child sends three different signals (2 equal).
  * They are left pending until
- * the father task is not scheduled. So father task receives both signals (one discarded). This makes the father
+ * the father task is scheduled. So father task receives both signals (one discarded). This makes the father
  * invalidate all the signals. Child is scheduled and another signal sent. Father is scheduled and does
  * not receive any signal. It terminates.
  */
