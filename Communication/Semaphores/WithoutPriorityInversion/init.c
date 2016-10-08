@@ -18,7 +18,7 @@ rtems_task_priority changePriority(rtems_id taskid, rtems_task_priority newprior
 {
 	rtems_task_priority p;
 
-	rtems_status_code temp = rtems_task_set_priority(taskid, 4, &p); //otherwise children could not be scheduled
+	rtems_status_code temp = rtems_task_set_priority(taskid, newpriority, &p); //otherwise children could not be scheduled
 	assert(temp == RTEMS_SUCCESSFUL);
 
 	return p;
