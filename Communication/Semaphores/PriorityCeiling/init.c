@@ -1,12 +1,7 @@
 /*
  * In this example I show Priority Inheritance in RTEMS. In particular, it is centred on the evolution of priorities.
  * The father task creates two children. The second one blocks two shared variables.
- * The father is scheduled and tries to obtain resource SV1 but it may not, so it gets suspended.
- * The first first has the lowest priority and so gets scheduled. It tries to access SV0 but it may not, so
- * 		it gets suspended.
- * The second child is the only ready one and so it is scheduled. It has now priority 4 (4 = max(4,5,6) because of
- * priority inheritance). It releases both shared resources and terminates. 
- * The father task is scheduled because of its priority and it terminates.
+ * 
  */
 
 #include <stdlib.h>
@@ -15,8 +10,8 @@
 #include <rtems.h>
 
 rtems_id fatherid, childid[2];
-rtems_id semid[2];
-int shared_var, shared_var2; //say, bank account balances
+rtems_id semid;
+int shared_var; //say, bank account balances
 
 rtems_task_priority changePriority(rtems_id taskid, rtems_task_priority newpriority)
 {
@@ -41,25 +36,11 @@ rtems_task_priority getPriority(rtems_id taskid)
 rtems_task task1_entrypoint(rtems_task_argument ignored)
 {
 	//coming from GOTO 3
-	rtems_status_code temp;
-	//changePriority(childid[0], 5);
-printf("\t%lu\n", getPriority(fatherid));
-printf("\t%lu\n", getPriority(childid[0]));
-printf("\t%lu\n", getPriority(childid[1])); // 4 5 4, as expected. And so, because father is waiting, should not child 2 get scheduled?
-	printf("\tChild 2 priority: %lu (exp. 4)\n", getPriority(childid[1]));
-	printf("\tChild 1 is going to acquire SV1. May not.\n");
-	printf("\tChild 2 priority: %lu (exp. 4)\n", getPriority(childid[1]));
-
-//Accessing resource SV1
-	temp = rtems_semaphore_obtain(semid[0], RTEMS_WAIT, RTEMS_NO_TIMEOUT); //get suspended,so GOTO 4
-	assert(temp == RTEMS_SUCCESSFUL);
-
-
-	//Releasing SV1
-	temp = rtems_semaphore_release(semid[0]);
-   	assert(temp == RTEMS_SUCCESSFUL);
-
-   	printf("\tChild 1 just released SV1. Child 2 priority: %lu (exp. 1)\n", getPriority(childid[1]));
+	printf("\tChild 1 scheduled. It is the medium priority task\n");
+	while(1)
+	{
+		// do nothing... (medium priority task)
+	}
 
    	printf("\tFinishing child 1\n");
    	//Without deleting this task, it will never return to father
@@ -77,30 +58,23 @@ rtems_task task2_entrypoint(rtems_task_argument ignored)
 	changePriority(childid[1], 6);
 	printf("\tChild 2: initial priority: %lu (exp. 6)\n", getPriority(childid[1]));
 
-//Accessing resource SV2 and SV1
-	temp = rtems_semaphore_obtain(semid[0], RTEMS_WAIT, RTEMS_NO_TIMEOUT);
+//Accessing resource SV
+	temp = rtems_semaphore_obtain(semid, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
 	assert(temp == RTEMS_SUCCESSFUL);
 
-	temp = rtems_semaphore_obtain(semid[1], RTEMS_WAIT, RTEMS_NO_TIMEOUT);
-	assert(temp == RTEMS_SUCCESSFUL);
-
-	printf("\tChild 2: acquired both shared resources. Priority: %lu (exp. 6)\n", getPriority(childid[1]));
+	printf("\tChild 2 just acquired a shared resource. Priority: %lu (exp. ceiling: 3)\n", getPriority(childid[1]));
 	shared_var++;
 
 //Scheduling Father
 	rtems_task_wake_after(RTEMS_YIELD_PROCESSOR); //GOTO 2
 
 //coming from GOTO 4
-	printf("\tChild 2: priority: %lu (exp. 4)\n", getPriority(childid[1]));
+	printf("\tChild 2: priority: %lu (exp. ceiling: 3)\n", getPriority(childid[1]));
 
-   	temp = rtems_semaphore_release(semid[1]);
+	temp = rtems_semaphore_release(semid);
    	assert(temp == RTEMS_SUCCESSFUL);
-   	printf("\tChild 2 just released SV2. Priority: %lu (exp. 5)\n", getPriority(childid[1]));
-
-	temp = rtems_semaphore_release(semid[0]);
-   	assert(temp == RTEMS_SUCCESSFUL);
-   	printf("\tChild 2 just released also SV1. No semaphores active for Child 2.\n");
-   	printf("\tChild 2: priority: %lu (exp. 6)\n", getPriority(childid[1]));
+   	printf("\tChild 2 just released SV. No semaphores active for Child 2.\n");
+   	printf("\tChild 2: priority: %lu (exp. original: 6)\n", getPriority(childid[1]));
 
 
    	printf("\tFinishing child 2\n");
@@ -116,7 +90,7 @@ rtems_task Init(rtems_task_argument argument)
 	rtems_status_code status[2], temp;
 	rtems_task_priority priorityc[2] = { 5, 6 };
 	rtems_name childname[2] = { rtems_build_name('C', 'T', '1', ' '), rtems_build_name('C', 'T', '2', ' ') };
-	rtems_name semname[2] = { rtems_build_name('S', '1', ' ', ' '), rtems_build_name('S', '2', ' ', ' ') };
+	rtems_name semname = rtems_build_name('S', '1', ' ', ' ');
 	rtems_attribute mymode;
 
 //Getting father's ID
@@ -125,12 +99,9 @@ rtems_task Init(rtems_task_argument argument)
 
 
 //Creating mutex
-	mymode = RTEMS_BINARY_SEMAPHORE | RTEMS_PRIORITY | RTEMS_INHERIT_PRIORITY | RTEMS_NO_PRIORITY_CEILING | RTEMS_NO_MULTIPROCESSOR_RESOURCE_SHARING | RTEMS_LOCAL;
-	temp = rtems_semaphore_create(semname[0], 1, mymode , 2, &semid[0]); //priority_ceiling will be used to avoid to change father's priority 2 times
+	mymode = RTEMS_BINARY_SEMAPHORE | RTEMS_PRIORITY | RTEMS_NO_INHERIT_PRIORITY | RTEMS_PRIORITY_CEILING | RTEMS_NO_MULTIPROCESSOR_RESOURCE_SHARING | RTEMS_LOCAL;
+	temp = rtems_semaphore_create(semname, 1, mymode , 3, &semid); // Priority Ceiling = 3
 	assert(temp == RTEMS_SUCCESSFUL);
-	temp = rtems_semaphore_create(semname[1], 1, mymode, 2, &semid[1]); //priority_ceiling will be used to avoid to change father's priority 2 times
-	assert(temp == RTEMS_SUCCESSFUL);
-
 
 //Creating 2 child
 	// prototype: rtems_task_create( name, initial_priority, stack_size, initial_modes, attribute_set, *id );
@@ -156,15 +127,14 @@ rtems_task Init(rtems_task_argument argument)
 	printf("Father task scheduled\n");
 
 //coming from GOTO 2
-//Trying to access SV2 with a mutex
-	printf("Father task is going to access SV1. May not\n");
-	//changePriority(childid[0], 1);
-	temp = rtems_semaphore_obtain(semid[1], RTEMS_WAIT, RTEMS_NO_TIMEOUT); //father waits, so GOTO 3
+//Trying to access SV with a mutex
+	printf("Father task is going to access SV. May not\n");
+	temp = rtems_semaphore_obtain(semid, RTEMS_WAIT, RTEMS_NO_TIMEOUT); //father waits, so GOTO 3
 	//coming from GOTO 5
 	assert(temp == RTEMS_SUCCESSFUL);
 
-//Releasing resource SV2
-	temp = rtems_semaphore_release(semid[1]);
+//Releasing resource SV
+	temp = rtems_semaphore_release(semid);
    	assert(temp == RTEMS_SUCCESSFUL);
 
 	printf("Finishing father...\n");
