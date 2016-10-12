@@ -15,6 +15,7 @@ void periodicTask(rtems_task_argument ignored)
 	rtems_status_code temp;
 	rtems_name periodname = rtems_build_name('P', 'E', 'E', 'X');
 	rtems_id periodid;
+	int i = 0;
 	
 	printf("Note: Ticks in a second: %lu\n",rtems_clock_get_ticks_per_second());
 
@@ -33,7 +34,7 @@ void periodicTask(rtems_task_argument ignored)
 		assert(temp == RTEMS_SUCCESSFUL);
 
 		//Performing some periodic action
-		printf("Periodic action\n\n");
+		printf("%d - Periodic action\n\n", i++);
 	}
 
 //Deleting istance of RMM and closing
@@ -87,7 +88,7 @@ void *POSIX_Init(void *argument)
 
 // Needed for RM Mangager
 #define CONFIGURE_MAXIMUM_PERIODS           1
-#define CONFIGURE_MICROSECONDS_PER_TICK     1000000 /* every 1 sec a tick */
+#define CONFIGURE_MICROSECONDS_PER_TICK     4000000 /* That's to make it work. a tick of 1.000.000 gives a periodic action every 1 second (with my machine). So 1 : 1.000.000 = 4 : x => x = 4 / 1 * 1.000.000 = 4.000.000 */
 
 #define CONFIGURE_INIT
 
