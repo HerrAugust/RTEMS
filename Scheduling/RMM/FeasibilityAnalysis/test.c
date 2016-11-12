@@ -43,10 +43,11 @@ void periodicTask1(rtems_task_argument ignored)
 		//Simulating computation time (= 6 msec)
 		while( (computation_time = rtems_clock_get_ticks_since_boot() - start) < 6) // 1 tick every ms => #tick/(#tick/ms) = #tick
 			;
-
+		
 		if(!done) {
 			printf("\tChild 1: comp_time = %f\n", computation_time);
 			total_utilization += computation_time / 10.0; //10 is the period of this child
+			printf("Total utilization: %f\n", total_utilization);
 			done = 1;
 		}
 	}
@@ -114,14 +115,14 @@ void *POSIX_Init(void *argument)
 {
 	rtems_name cname[2] = { rtems_build_name('C', '1', ' ', ' '), rtems_build_name('C', '2', ' ', ' ') };
 	rtems_status_code temp;
-	rtems_task_priority cpriority[2] = { 2, 2 };
+	rtems_task_priority cpriority[2] = { 1, 2 };
 	rtems_id childid[2];
 
 	temp = rtems_task_create(cname[0], cpriority[0], RTEMS_MINIMUM_STACK_SIZE * 2,
-		RTEMS_DEFAULT_MODES, RTEMS_DEFAULT_ATTRIBUTES & RTEMS_NO_FLOATING_POINT | RTEMS_FLOATING_POINT, &childid[0]);
+		(RTEMS_DEFAULT_MODES & RTEMS_PREEMPT) | RTEMS_NO_PREEMPT, (RTEMS_DEFAULT_ATTRIBUTES & RTEMS_NO_FLOATING_POINT) | RTEMS_FLOATING_POINT, &childid[0]);
 	assert(temp == RTEMS_SUCCESSFUL);
 	temp = rtems_task_create(cname[1], cpriority[1], RTEMS_MINIMUM_STACK_SIZE * 2,
-		RTEMS_DEFAULT_MODES, RTEMS_DEFAULT_ATTRIBUTES & RTEMS_NO_FLOATING_POINT | RTEMS_FLOATING_POINT, &childid[1]);
+		(RTEMS_DEFAULT_MODES & RTEMS_PREEMPT) | RTEMS_NO_PREEMPT, (RTEMS_DEFAULT_ATTRIBUTES & RTEMS_NO_FLOATING_POINT) | RTEMS_FLOATING_POINT, &childid[1]);
 	assert(temp == RTEMS_SUCCESSFUL);
 	printf("Start child with id %lu\n", childid[0]);
 	printf("Start child with id %lu\n", childid[1]);
@@ -155,7 +156,7 @@ void *POSIX_Init(void *argument)
 #define CONFIGURE_MAXIMUM_PERIODS           2
 #define CONFIGURE_MICROSECONDS_PER_TICK     1000 /* every millisec a tick */
 
-#define CONFIGURE_TICKS_PER_TIMESLICE 		2 /* every 2 ticks a timeslice */
+//#define CONFIGURE_TICKS_PER_TIMESLICE 		10 /* every 10 ticks a timeslice */
 
 #define CONFIGURE_INIT
 
