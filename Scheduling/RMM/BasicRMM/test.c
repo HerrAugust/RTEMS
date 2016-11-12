@@ -1,7 +1,3 @@
-/*
- *  Simple test program -- simplified version of sample test hello.
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <rtems.h>
@@ -24,11 +20,11 @@ void periodicTask(rtems_task_argument ignored)
 	assert(temp == RTEMS_SUCCESSFUL);
 
 
-//Assigning this task to RMM with period 4 sec and performing some periodic action
+//Assigning this task to RMM with period 40 ms and performing some periodic action
 	while(1)
 	{
-		//Starting period of 4 seconds
-		temp = rtems_rate_monotonic_period(periodid, 4);
+		//Starting period of 40 ms
+		temp = rtems_rate_monotonic_period(periodid, 40);
 		if( temp == RTEMS_TIMEOUT )
 			break;
 		assert(temp == RTEMS_SUCCESSFUL);
@@ -88,7 +84,7 @@ void *POSIX_Init(void *argument)
 
 // Needed for RM Mangager
 #define CONFIGURE_MAXIMUM_PERIODS           1
-#define CONFIGURE_MICROSECONDS_PER_TICK     4000000 /* That's to make it work. a tick of 1.000.000 gives a periodic action every 1 second (with my machine). So 1 : 1.000.000 = 4 : x => x = 4 / 1 * 1.000.000 = 4.000.000 */
+#define CONFIGURE_MICROSECONDS_PER_TICK     1000 /* 1 ms */
 
 #define CONFIGURE_INIT
 
